@@ -1,19 +1,82 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
-    <title>Hello World!</title>
+    <title>Test blob</title>
+    <script>
+      var $ = require('jquery');
+      $( document ).ready(function() {
+        var vid = $('.vid')[0];
+
+        $('.start').on('click', function() {
+          // Start the video
+          console.log('Starting...');
+          navigator.mediaDevices.getUserMedia({video:{width:{min:1280}}, audio:false})
+          .then(function(stream) {
+            console.log('Got local media');
+            vid.autoplay = true;
+            vid.src = window.URL.createObjectURL(stream);
+
+            $(vid).on('play', function() {
+              console.log('Playing: '+vid.videoWidth+'/'+vid.videoHeight);
+              // Do canvas ops
+              doCanvasOp();
+            });
+          });
+        });
+          
+        function doCanvasOp() {
+          // Get frame as canvas
+          var canvas = document.createElement('canvas');
+          canvas.width  = vid.videoWidth;
+          canvas.height = vid.videoHeight;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(vid, 0, 0);
+          // Get a small crop
+          var canvasCrop = document.createElement('canvas');
+          canvasCrop.width  = 150;
+          canvasCrop.height = 150;
+          var ctxCrop = canvasCrop.getContext('2d');
+          ctxCrop.drawImage(canvas, 0, 0, 150, 150, 0, 0, 150, 150);
+          // Convert to blob
+          canvasCrop.toBlob(function(blob) {
+            console.log('Blob size: '+blob.size);
+            
+            if(!blob.size) {
+              // Error!
+              // Try again just for fun
+              canvasCrop.toBlob(function(blob2) {
+                // Display sample and stop
+                $('.sample').empty();
+                $('.sample').append(canvasCrop);
+                alert('Woops! First try:'+blob.size+' Second try:'+blob2.size);
+              }, 'image/jpeg');
+              return;
+            }
+
+            // Do it again
+            doCanvasOp();
+          },
+          'image/jpeg');
+        }
+      });
+    </script>
+    <style>
+      .button.start {
+          margin-bottom: 40px;
+          display: inline-block;
+          padding: 10px 20px;
+          border: 1px solid grey;
+          cursor: pointer;
+      }
+      video.vid {
+        width: 600px;
+      }
+    </style>
   </head>
   <body>
-    <h1>Hello World!</h1>
-    <!-- All of the Node.js APIs are available in this renderer process. -->
-    We are using Node.js <script>document.write(process.versions.node)</script>,
-    Chromium <script>document.write(process.versions.chrome)</script>,
-    and Electron <script>document.write(process.versions.electron)</script>.
-
-    <script>
-      // You can also require other files to run in this process
-      require('./renderer.js')
-    </script>
+    <div>
+      <div class="button start">Start</div>
+    </div>
+    <div class="sample"></div>
+    <video class="vid"></video>
   </body>
 </html>
